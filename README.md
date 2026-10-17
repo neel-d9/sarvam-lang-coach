@@ -48,8 +48,25 @@ SARVAM_API_KEY=your_sarvam_api_key_here
 
 ## ⚡ Quickstart
 
-### 1. Translate Any English Sentence into Your Voice
-Type any sentence you want to learn:
+### Option A: Launch the Interactive Web Studio (Recommended 🌟)
+Launch the Claude-inspired web app with in-browser microphone recording, audio player, and Shadowing Practice Lab:
+
+```bash
+python app.py
+```
+Open **[http://localhost:8000](http://localhost:8000)** in your browser!
+
+#### Web Studio Features:
+- **1-Click Voice Enrollment**: Record 5–10s of your voice straight from your browser microphone (automatic 16kHz PCM WAV encoding).
+- **Audio Mirroring**: Transcribe what you said in your reference audio with **Saaras v3**, translate with **Mayura**, and hear it spoken in native Indic languages with your own voice.
+- **Situational Topic Decks**: Interactive chips for Street Food, Market Bargaining, Auto Rickshaw, Train Travel, and Interview Greetings.
+- **Full Phonetic Breakdown**: Switch seamlessly between **IAST** (with diacritics), **IPA** (`/.../`), and **Syllables**.
+- **Shadowing Lab with Pronunciation Scoring**: Record yourself repeating the phrase to receive an instant **% match score** from Saaras v3 + constructive articulatory feedback from Sarvam-105B.
+- **Audio Player with 0.75x Slow-Motion**: Slow down playback to hear subtle phoneme and vowel transitions.
+
+---
+
+### Option B: Command-Line Interface (CLI)
 ```bash
 python coach.py --lang bn-IN --text "Can you please tell me how much this costs?"
 python coach.py --lang ta-IN --text "Where can I find good street food?"

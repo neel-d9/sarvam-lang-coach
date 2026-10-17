@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sarvam · Language Coach with Your Own Voice</title>
+  
+  <!-- Claude-inspired typography: Newsreader (Editorial Serif), Plus Jakarta Sans (Clean Modern Sans), JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-glyph">✦</span>
+        <div class="brand-text">
+          <span class="brand-title">Sarvam <span class="brand-subtitle">Language Coach</span></span>
+          <span class="brand-tagline">Vocal Mirroring & Indic Pronunciation Lab</span>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <!-- Target Language Selector -->
+        <div class="lang-selector-wrapper">
+          <label for="langSelect" class="control-label">Target Language</label>
+          <div class="select-styled">
+            <select id="langSelect">
+              <option value="bn-IN" selected>বাংলা · Bengali</option>
+              <option value="hi-IN">हिन्दी · Hindi</option>
+              <option value="ta-IN">தமிழ் · Tamil</option>
+              <option value="te-IN">తెలుగు · Telugu</option>
+              <option value="mr-IN">मराठी · Marathi</option>
+              <option value="kn-IN">ಕನ್ನಡ · Kannada</option>
+              <option value="gu-IN">ગુજરાતી · Gujarati</option>
+              <option value="pa-IN">ਪੰਜਾਬੀ · Punjabi</option>
+              <option value="ml-IN">മലയാളം · Malayalam</option>
+              <option value="od-IN">ଓଡ଼ିଆ · Odia</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Voice Status Pill -->
+        <div class="voice-badge" id="voiceStatusBadge" title="Your voice model status">
+          <span class="status-dot"></span>
+          <span class="status-text" id="voiceStatusText">Voice Ready</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Grid Layout -->
+    <main class="studio-grid">
+      <!-- LEFT COLUMN: Voice Enrollment & Shadowing Practice Lab -->
+      <aside class="studio-sidebar">
+        <!-- Voice Enrollment Card -->
+        <section class="card voice-enroll-card">
+          <div class="card-header">
+            <span class="card-eyebrow">Identity</span>
+            <h2 class="card-title">Your Voice Model</h2>
+          </div>
+          <p class="card-desc">
+            Record 5–10 seconds of speech. Sarvam will clone your vocal timbre and apply authentic native pronunciation in your voice.
+          </p>
+
+          <!-- Voice visualizer & Record button -->
+          <div class="voice-recorder-box">
+            <canvas id="micVisualizer" width="300" height="60"></canvas>
+            
+            <div class="recorder-actions">
+              <button id="btnRecordVoice" class="btn btn-secondary">
+                <span class="mic-icon">●</span>
+                <span id="btnRecordVoiceText">Record My Voice</span>
+              </button>
+              <label class="btn btn-ghost file-upload-label">
+                Upload WAV
+                <input type="file" id="voiceFileInput" accept="audio/*" hidden>
+              </label>
+            </div>
+            <div id="recordingTimer" class="recording-timer hidden">00:00</div>
+          </div>
+
+          <div id="enrolledVoiceInfo" class="voice-info-box">
+            <div class="info-row">
+              <span class="info-label">Active Reference:</span>
+              <span class="info-val" id="activeVoiceName">reference.wav</span>
+            </div>
+            <audio id="refAudioPlayer" controls class="mini-audio-player"></audio>
+          </div>
+        </section>
+
+        <!-- Shadowing Practice & Accuracy Lab -->
+        <section class="card practice-card">
+          <div class="card-header">
+            <span class="card-eyebrow">Lab</span>
+            <h2 class="card-title">Shadowing Practice</h2>
+          </div>
+          <p class="card-desc">
+            Listen to yourself speaking the phrase, then record your attempt to get an instant pronunciation score.
+          </p>
+
+          <div class="practice-box">
+            <button id="btnPracticeRecord" class="btn btn-terracotta btn-block" disabled>
+              <span class="pulse-icon">🎙</span> Record Your Attempt
+            </button>
+            <div id="practiceStatus" class="practice-status-text">Generate a phrase first</div>
+          </div>
+
+          <!-- Evaluation Result -->
+          <div id="evalResult" class="eval-result-box hidden">
+            <div class="score-ring-wrap">
+              <div class="score-circle">
+                <span id="scoreVal" class="score-number">92</span>
+                <span class="score-label">% Match</span>
+              </div>
+            </div>
+            <div class="eval-details">
+              <div class="eval-row">
+                <span class="eval-label">Heard by Saaras:</span>
+                <p id="evalTranscript" class="eval-text">...</p>
+              </div>
+              <div class="eval-row">
+                <span class="eval-label">Coach Feedback:</span>
+                <p id="evalFeedback" class="eval-text">...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- RIGHT COLUMN: Coach Studio & Lesson Display -->
+      <section class="studio-main">
+        <!-- Input Mode Tabs -->
+        <div class="mode-tabs">
+          <button class="mode-tab active" data-mode="text">
+            <span>Translate & Speak</span>
+          </button>
+          <button class="mode-tab" data-mode="situation">
+            <span>Situational Topics</span>
+          </button>
+          <button class="mode-tab" data-mode="audio">
+            <span>Mirror My Audio</span>
+          </button>
+          <button class="mode-tab" data-mode="direct">
+            <span>Direct Script</span>
+          </button>
+        </div>
+
+        <!-- Mode Form Containers -->
+        <div class="mode-contents card">
+          <!-- Mode 1: Translate Text -->
+          <div class="mode-panel active" id="panel-text">
+            <div class="input-group">
+              <label for="inputText" class="field-label">What would you like to say?</label>
+              <div class="textarea-wrap">
+                <textarea id="inputText" placeholder="e.g. Can you please tell me how much this costs? Where can I find good street food?">Can you please tell me how much this costs?</textarea>
+              </div>
+            </div>
+            <!-- Quick Chips -->
+            <div class="quick-chips">
+              <span class="chip-label">Suggestions:</span>
+              <button class="chip" data-phrase="Can you please tell me how much this costs?">Price Inquiry</button>
+              <button class="chip" data-phrase="Where is the nearest train station?">Directions</button>
+              <button class="chip" data-phrase="I would like a cup of tea please.">Ordering Tea</button>
+              <button class="chip" data-phrase="Thank you very much for your help!">Gratitude</button>
+            </div>
+          </div>
+
+          <!-- Mode 2: Situations -->
+          <div class="mode-panel" id="panel-situation">
+            <label class="field-label">Select or Type a Scenario</label>
+            <div class="topic-grid">
+              <button class="topic-chip active" data-topic="bargaining at a local street market">Market Bargaining</button>
+              <button class="topic-chip" data-topic="ordering spicy street food">Street Food</button>
+              <button class="topic-chip" data-topic="haggling with an auto rickshaw driver">Auto Rickshaw</button>
+              <button class="topic-chip" data-topic="asking for train station directions">Train Travel</button>
+              <button class="topic-chip" data-topic="formal greeting at an interview">Interview Greeting</button>
+              <button class="topic-chip" data-topic="asking for vegetarian food recommendations">Vegetarian Food</button>
+            </div>
+            <div class="input-group mt-3">
+              <input type="text" id="customTopicInput" class="input-text" placeholder="Or type any custom topic (e.g., cricket match banter)...">
+            </div>
+          </div>
+
+          <!-- Mode 3: Audio Mirror -->
+          <div class="mode-panel" id="panel-audio">
+            <div class="audio-mirror-notice">
+              <p>Sarvam <strong>Saaras v3</strong> will transcribe whatever you said in your reference audio clip, translate it into the target language using <strong>Mayura</strong>, and pronounce it back in your own voice.</p>
+            </div>
+          </div>
+
+          <!-- Mode 4: Direct Native Script -->
+          <div class="mode-panel" id="panel-direct">
+            <div class="input-group">
+              <label for="directPhraseText" class="field-label">Enter Phrase in Native Script or Hinglish/Banglish</label>
+              <textarea id="directPhraseText" placeholder="e.g. আমি বাংলা শিখছি or ami bangla shikhchhi"></textarea>
+            </div>
+          </div>
+
+          <!-- Notation Options & Action Bar -->
+          <div class="studio-action-bar">
+            <div class="notation-select-wrap">
+              <span class="control-label">Phonetics:</span>
+              <div class="pill-group">
+                <button class="pill-btn active" data-notation="all">All</button>
+                <button class="pill-btn" data-notation="iast">IAST</button>
+                <button class="pill-btn" data-notation="ipa">IPA</button>
+                <button class="pill-btn" data-notation="roman">Syllables</button>
+              </div>
+            </div>
+
+            <button id="btnGenerate" class="btn btn-primary">
+              <span class="btn-spinner hidden" id="genSpinner"></span>
+              <span id="btnGenerateText">Generate in My Voice ✦</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- THE LESSON DECK & PHONETICS CARD -->
+        <section class="lesson-deck card" id="lessonDeck">
+          <div class="deck-header">
+            <div class="deck-tag" id="deckLangTag">Bengali (bn-IN)</div>
+            <div class="deck-actions">
+              <button class="icon-btn" id="btnCopyText" title="Copy text">📋</button>
+            </div>
+          </div>
+
+          <!-- Primary Native Phrase Display -->
+          <div class="phrase-showcase">
+            <h1 class="native-text" id="displayNative">আপনি কি বলতে পারবেন, এটার price কত?</h1>
+            <p class="meaning-text" id="displayMeaning">Can you please tell me how much this costs?</p>
+          </div>
+
+          <!-- Custom Audio Player Bar -->
+          <div class="audio-control-deck">
+            <button id="btnPlayAudio" class="player-play-btn" title="Play Pronunciation">▶</button>
+            <div class="player-timeline">
+              <div class="player-progress-bar" id="progressBar">
+                <div class="player-progress-fill" id="progressFill"></div>
+              </div>
+              <div class="player-time" id="playerTime">0:00 / 0:00</div>
+            </div>
+            <div class="player-extra-controls">
+              <button id="btnSpeedToggle" class="pill-btn pill-sm" title="Toggle 0.75x slow motion for phonetic listening">1.0x</button>
+            </div>
+          </div>
+
+          <!-- Phonetics & Articulatory Guide -->
+          <div class="phonetics-container">
+            <!-- IAST -->
+            <div class="phonetic-card" id="cardIast">
+              <span class="phonetic-card-label">IAST (Sanskrit Transliteration)</span>
+              <div class="phonetic-value monospace" id="valIast">āpni ki bolte pārben, eṭār prāis koto?</div>
+            </div>
+
+            <!-- IPA -->
+            <div class="phonetic-card" id="cardIpa">
+              <span class="phonetic-card-label">IPA (International Phonetic Alphabet)</span>
+              <div class="phonetic-value monospace" id="valIpa">/apni ki bolte parben, etar prais kɔto/</div>
+            </div>
+
+            <!-- Syllable Breakdown -->
+            <div class="phonetic-card" id="cardSyllables">
+              <span class="phonetic-card-label">Syllable Breakdown</span>
+              <div class="phonetic-value" id="valSyllables">ap-ni ki bol-te par-ben, e-tar price ko-to?</div>
+            </div>
+
+            <!-- Articulatory Tip -->
+            <div class="tip-card" id="cardTip">
+              <div class="tip-header">
+                <span class="tip-glyph">💡</span>
+                <span class="tip-title">Articulatory & Mouth Placement Guide</span>
+              </div>
+              <p class="tip-body" id="valTip">
+                The 'p' in 'apni' and 'bolte' is a soft, unaspirated bilabial stop (produced with gentle air, not a harsh burst). Keep the lips gently rounded on the vowel 'o'.
+              </p>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>Built with <strong>Sarvam AI</strong> · Saaras v3, Mayura, Sarvam-105B, & Instant Voice Cloning</span>
+      <a href="https://github.com/neel-d9/sarvam-lang-coach" target="_blank" class="github-link">GitHub Repository ↗</a>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
