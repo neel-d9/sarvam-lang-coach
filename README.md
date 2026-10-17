@@ -2,7 +2,7 @@
 
 > **Hear yourself speak any Indian language with authentic native pronunciation.** Powered by [Sarvam AI](https://www.sarvam.ai/).
 
-🌐 **Live Demo:** [https://sarvam-buildathon-navy.vercel.app](https://sarvam-buildathon-navy.vercel.app)  
+🌐 **Live Demo:** [https://sarvam-lang-coach.vercel.app](https://sarvam-lang-coach.vercel.app)  
 📦 **GitHub:** [https://github.com/neel-d9/sarvam-lang-coach](https://github.com/neel-d9/sarvam-lang-coach)
 
 ---
