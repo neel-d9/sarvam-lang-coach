@@ -71,7 +71,24 @@ python coach.py --lang hi-IN --topic "ordering spicy street food"
 python coach.py --lang te-IN --topic "asking for directions to the airport"
 ```
 
-### 4. Interactive Mode
+### 4. Phonetic Notation Modes (IPA & IAST)
+Choose between **IPA** (International Phonetic Alphabet), **IAST** (Indic Sanskrit transliteration with diacritics), **Roman** syllables, or **All**:
+
+```bash
+# Full breakdown (IAST + IPA + Syllables + Articulation Tips) - Default
+python coach.py --lang bn-IN --phrase "আমি বাংলা শিখছি" --notation all
+
+# IPA only
+python coach.py --lang bn-IN --phrase "আমি বাংলা শিখছি" --notation ipa
+
+# IAST only (with accurate diacritics: ā, ī, ū, ṭ, ḍ, ś, etc.)
+python coach.py --lang bn-IN --phrase "আমি বাংলা শিখছি" --notation iast
+
+# Casual Romanized syllables only
+python coach.py --lang bn-IN --phrase "আমি বাংলা শিখছি" --notation roman
+```
+
+### 5. Interactive Mode
 Simply run without arguments and pick an option:
 ```bash
 python coach.py --lang bn-IN

@@ -95,23 +95,30 @@ def translate_text(text: str, target_lang: str) -> str:
     print(f" -> Translation: \"{translated}\"")
     return translated
 
-def get_phonetic_and_tips(native_phrase: str, lang_name: str, english_meaning: str = "") -> str:
-    """Uses Sarvam-105B to give Romanized phonetics and mouth placement tips."""
+def get_phonetic_and_tips(native_phrase: str, lang_name: str, english_meaning: str = "", notation_mode: str = "all") -> str:
+    """Uses Sarvam-105B to give phonetic transcription (IPA / IAST / Roman) and articulatory mouth placement tips."""
     prompt = (
-        f"You are an Indic language pronunciation coach for {lang_name}.\n"
-        f"Phrase: '{native_phrase}'"
+        f"You are an expert Indic language phonetician and pronunciation coach for {lang_name}.\n"
+        f"Target Phrase: '{native_phrase}'"
     )
     if english_meaning:
         prompt += f" (Meaning: '{english_meaning}')\n"
-    prompt += (
-        "\nProvide:"
-        "\nPHONETIC: <Romanized syllable-by-syllable pronunciation breakdown>"
-        "\nTIP: <1-2 sentences on mouth/tongue placement, stress, or specific Indic letter sounds>"
-    )
+
+    fields = []
+    if notation_mode in ("iast", "all"):
+        fields.append("IAST: <Precise IAST transliteration with accurate diacritics like ā, ī, ū, ṛ, ṭ, ḍ, ṇ, ś, ṣ, ṃ, ḥ>")
+    if notation_mode in ("ipa", "all"):
+        fields.append("IPA: <Precise International Phonetic Alphabet transcription enclosed in /.../, indicating dental vs retroflex consonants and Indic vowels>")
+    if notation_mode in ("roman", "all"):
+        fields.append("SYLLABLES: <Casual hyphenated syllable-by-syllable pronunciation breakdown>")
+    fields.append("TIP: <1-2 concise sentences on articulatory phonetics, tongue/lip positioning, aspiration, and stress>")
+
+    prompt += "\nOutput in this exact format:\n" + "\n".join(fields)
+
     resp = client.chat.completions(
         model="sarvam-105b-conversations",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
+        temperature=0.2,
     )
     return resp.choices[0].message.content.strip()
 
@@ -171,6 +178,14 @@ def main():
         "--topic",
         default=None,
         help="Topic for AI-generated situational phrase (e.g., travel, restaurant, directions, bargaining, emergency)",
+    )
+    parser.add_argument(
+        "--notation",
+        "--phonetic",
+        dest="notation",
+        default="all",
+        choices=["all", "ipa", "iast", "roman"],
+        help="Phonetic notation format: 'ipa' (IPA), 'iast' (IAST transliteration), 'roman' (casual syllables), or 'all' (default)",
     )
     parser.add_argument(
         "--ref",
@@ -253,8 +268,8 @@ def main():
             target_phrase = translate_text(heard_text, lang_code)
 
     # Step 2: Get Pronunciation Guidance from Sarvam-105B
-    print(f"\n[Coach] Generating phonetic guide & pronunciation tips with Sarvam-105B...")
-    coaching_tips = get_phonetic_and_tips(target_phrase, lang_name, source_english)
+    print(f"\n[Coach] Generating phonetic guide ({args.notation.upper()}) & pronunciation tips with Sarvam-105B...")
+    coaching_tips = get_phonetic_and_tips(target_phrase, lang_name, source_english, notation_mode=args.notation)
     print("\n" + "-" * 40)
     print(f"Phrase in {lang_name}: {target_phrase}")
     if source_english:
