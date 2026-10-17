@@ -48,27 +48,33 @@ SARVAM_API_KEY=your_sarvam_api_key_here
 
 ## ⚡ Quickstart
 
-### Run the Coach
-Generate a tailored lesson and hear it in your voice:
-
+### 1. Translate Any English Sentence into Your Voice
+Type any sentence you want to learn:
 ```bash
-# Default (Hindi)
-python coach.py
+python coach.py --lang bn-IN --text "Can you please tell me how much this costs?"
+python coach.py --lang ta-IN --text "Where can I find good street food?"
+python coach.py --lang hi-IN --text "Could you please give me a glass of water?"
+```
 
-# Tamil
-python coach.py --lang ta-IN
+### 2. Translate Your Spoken Reference Audio Directly (`--from-audio`)
+Transcribes whatever you said in `reference.wav` with **Saaras v3**, translates it with **Mayura**, and synthesizes it in the target language in your own voice:
+```bash
+python coach.py --lang bn-IN --from-audio
+python coach.py --lang ta-IN --from-audio
+```
 
-# Telugu
-python coach.py --lang te-IN
+### 3. Topic-Based Situational Coaching (`--topic`)
+Generate realistic, non-trivial practical phrases for specific contexts:
+```bash
+python coach.py --lang bn-IN --topic "bargaining at a local market"
+python coach.py --lang hi-IN --topic "ordering spicy street food"
+python coach.py --lang te-IN --topic "asking for directions to the airport"
+```
 
-# Bengali
+### 4. Interactive Mode
+Simply run without arguments and pick an option:
+```bash
 python coach.py --lang bn-IN
-
-# Marathi
-python coach.py --lang mr-IN
-
-# Kannada
-python coach.py --lang kn-IN
 ```
 
 ### Use Your Real Voice
