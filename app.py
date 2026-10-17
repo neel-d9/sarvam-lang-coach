@@ -2,6 +2,7 @@ import os
 import sys
 import base64
 import difflib
+import tempfile
 from pathlib import Path
 from typing import Optional
 
@@ -14,6 +15,7 @@ if sys.platform == "win32":
         pass
 
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
@@ -33,17 +35,46 @@ if env_file.exists():
                     k, v = line.split("=", 1)
                     os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
 
-api_key = os.environ.get("SARVAM_API_KEY")
-if not api_key:
-    raise ValueError("SARVAM_API_KEY is not set. Please add it to your .env file.")
+# Lazy Sarvam client
+_client = None
 
-client = SarvamAI(api_subscription_key=api_key)
+def get_client() -> SarvamAI:
+    global _client
+    if _client is not None:
+        return _client
+    api_key = os.environ.get("SARVAM_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="SARVAM_API_KEY is not configured in the server environment.",
+        )
+    _client = SarvamAI(api_subscription_key=api_key)
+    return _client
 
 app = FastAPI(title="Sarvam Language Coach", version="1.0.0")
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
-REF_AUDIO_PATH = BASE_DIR / "reference.wav"
+
+# Writable paths (Vercel serverless filesystem is read-only except tempdir)
+TEMP_DIR = Path(tempfile.gettempdir())
+ENROLLED_REF_AUDIO = TEMP_DIR / "sarvam_enrolled_voice.wav"
+BUNDLED_REF_AUDIO = BASE_DIR / "reference.wav"
+
+def get_active_ref_audio() -> Path:
+    if ENROLLED_REF_AUDIO.exists() and ENROLLED_REF_AUDIO.stat().st_size > 1000:
+        return ENROLLED_REF_AUDIO
+    if BUNDLED_REF_AUDIO.exists() and BUNDLED_REF_AUDIO.stat().st_size > 1000:
+        return BUNDLED_REF_AUDIO
+    return ENROLLED_REF_AUDIO
 
 SUPPORTED_LANGUAGES = [
     {"code": "bn-IN", "name": "Bengali", "native": "বাংলা", "region": "Bengal & Tripura"},
@@ -93,34 +124,37 @@ async def get_languages():
 
 @app.get("/api/voice/status")
 async def get_voice_status():
-    if REF_AUDIO_PATH.exists() and REF_AUDIO_PATH.stat().st_size > 1000:
+    ref_path = get_active_ref_audio()
+    if ref_path.exists() and ref_path.stat().st_size > 1000:
         return {
             "enrolled": True,
-            "filename": REF_AUDIO_PATH.name,
-            "size_bytes": REF_AUDIO_PATH.stat().st_size,
+            "filename": ref_path.name,
+            "size_bytes": ref_path.stat().st_size,
         }
     return {"enrolled": False}
 
 @app.get("/api/voice/audio")
 async def get_voice_audio():
-    if REF_AUDIO_PATH.exists():
-        return FileResponse(REF_AUDIO_PATH, media_type="audio/wav")
+    ref_path = get_active_ref_audio()
+    if ref_path.exists():
+        return FileResponse(ref_path, media_type="audio/wav")
     raise HTTPException(status_code=404, detail="No reference voice found")
 
 @app.post("/api/voice/enroll")
 async def enroll_voice(file: UploadFile = File(...)):
     """Uploads a WAV clip from the browser microphone to serve as the user's voice model."""
+    client = get_client()
     content = await file.read()
     if len(content) < 1000:
         raise HTTPException(status_code=400, detail="Audio file too short. Please speak for at least 5 seconds.")
 
-    with open(REF_AUDIO_PATH, "wb") as f:
+    with open(ENROLLED_REF_AUDIO, "wb") as f:
         f.write(content)
 
     # Transcribe sample to confirm voice quality
     transcript = ""
     try:
-        with open(REF_AUDIO_PATH, "rb") as f:
+        with open(ENROLLED_REF_AUDIO, "rb") as f:
             stt = client.speech_to_text.transcribe(file=f, model="saaras:v3")
             transcript = stt.transcript.strip()
     except Exception as e:
@@ -135,12 +169,14 @@ async def enroll_voice(file: UploadFile = File(...)):
 
 @app.post("/api/coach/generate")
 async def generate_lesson(req: CoachRequest):
+    client = get_client()
     lang_info = next((l for l in SUPPORTED_LANGUAGES if l["code"] == req.target_lang), None)
     lang_name = lang_info["name"] if lang_info else "Bengali"
 
+    ref_audio_path = get_active_ref_audio()
+
     # Ensure reference audio exists
-    if not REF_AUDIO_PATH.exists() or REF_AUDIO_PATH.stat().st_size < 1000:
-        # Generate clean starter reference sample with Bulbul TTS
+    if not ref_audio_path.exists() or ref_audio_path.stat().st_size < 1000:
         sample_text = "Hello! I am excited to learn new languages. Every day is a great opportunity to practice."
         tts = client.text_to_speech.convert(
             text=sample_text,
@@ -148,8 +184,9 @@ async def generate_lesson(req: CoachRequest):
             speaker="kavya",
             model="bulbul:v3",
         )
-        with open(REF_AUDIO_PATH, "wb") as f:
+        with open(ENROLLED_REF_AUDIO, "wb") as f:
             f.write(base64.b64decode(tts.audios[0]))
+        ref_audio_path = ENROLLED_REF_AUDIO
 
     target_phrase = ""
     english_meaning = ""
@@ -167,7 +204,7 @@ async def generate_lesson(req: CoachRequest):
 
     # Mode 2: Transcribe reference audio & translate
     elif req.mode == "audio":
-        with open(REF_AUDIO_PATH, "rb") as f:
+        with open(ref_audio_path, "rb") as f:
             stt = client.speech_to_text.transcribe(file=f, model="saaras:v3")
         english_meaning = stt.transcript.strip()
         trans = client.text.translate(
@@ -230,7 +267,7 @@ async def generate_lesson(req: CoachRequest):
     phonetics = parse_phonetic_fields(p_chat.choices[0].message.content.strip())
 
     # Generate speech in learner's cloned voice
-    with open(REF_AUDIO_PATH, "rb") as f:
+    with open(ref_audio_path, "rb") as f:
         voice_resp = client.voice_cloning.convert(
             ref_audio=f,
             text=target_phrase,
@@ -255,8 +292,9 @@ async def evaluate_attempt(
     target_lang: str = Form(...),
 ):
     """Evaluates the learner's spoken attempt using Saaras v3 + alignment analysis."""
+    client = get_client()
     content = await file.read()
-    temp_attempt = BASE_DIR / "temp_attempt.wav"
+    temp_attempt = TEMP_DIR / "sarvam_temp_attempt.wav"
     with open(temp_attempt, "wb") as f:
         f.write(content)
 
@@ -297,14 +335,17 @@ async def evaluate_attempt(
         "feedback": feedback,
     }
 
-# Serve static frontend
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# Mount static frontend for local development
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def serve_index():
-    return FileResponse(STATIC_DIR / "index.html")
+    index_file = STATIC_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(index_file)
+    return {"message": "Sarvam Language Coach API is running"}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
-

@@ -14,3 +14,5 @@ venv/
 
 # Audio outputs (keep repo clean)
 *.wav
+
+.vercel
